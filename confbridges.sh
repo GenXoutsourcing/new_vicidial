@@ -6,8 +6,8 @@ echo "Upgrade Asterisk 18 to use ConfBridges"
 cd /usr/src/
 rm -rf vicidial-install-scripts
 git clone https://github.com/GenXoutsourcing/new_vicidial.git
-cd vicidial-install-scripts
-cd /usr/src/vicidial-install-scripts/
+cd new_vicidial
+cd /usr/src/new_vicidial/
 yes | cp -rf extensions.conf /etc/asterisk/extensions.conf
 mv confbridge-vicidial.conf /etc/asterisk/
 
