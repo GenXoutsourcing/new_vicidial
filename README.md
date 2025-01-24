@@ -1,13 +1,3 @@
-For those of you who don't know who I am, I am carpenox from the ViciDial forums and as most people can confirm, I help out of the goodness of my heart to our community. I want us all to succeed together! With that being said, If my knowledge base or my github has helped you or your business, please feel free to donate to help me keep the help going.
-
-# AI AMD - We also offer AI Driven Answering Machine Detection(AMD) available, email info@cyburdial.com for more info.
-
-# www.dialer.one for our full knowledge base
-
-# Need help? Hit me up on Skype: live:carpenox_3
-# Have I helped you? Please feel free to donate here: https://www.paypal.me/TheDialerOne
-
-
 # VICIDIAL INSTALLATION SCRIPTS (Default is Eastern Time Zone US)
 # Centos, Rocky and AlmaLinux Vicidial Install pre_requisites 
 # I have created a faster auto installer for Alma and Rocky 9 that will also install the dynamic portal and the CyburPhone
