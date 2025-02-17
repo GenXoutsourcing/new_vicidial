@@ -37,7 +37,7 @@ If you do not install the SSL cert during the initiial install, you have to turn
 # NEW main installer to use for Alma/Rocky 9 w/ Dynamic portal, WebPhone, SSL cert & Asterisk 18 with Confbridges
 
 ```
-cd /usr/src/vicidial-install-scripts
+cd /usr/src/new_vicidial
 chmod +x main-installer.sh
 ./main-installer.sh
 ```
