@@ -107,46 +107,102 @@ user = mysql
 
 [client]
 port = 3306
-socket = /var/lib/mysql/mysql.sock
+socket = /run/mysqld/mysqld.sock
 
 [mysqld]
-datadir = /var/lib/mysql
-#tmpdir = /home/mysql_tmp
-socket = /var/lib/mysql/mysql.sock
-user = mysql
-old_passwords = 0
-ft_min_word_len = 3
-max_connections = 800
-max_allowed_packet = 32M
-skip-external-locking
-sql_mode="NO_ENGINE_SUBSTITUTION"
+#bind-address = 127.0.0.1 # Uncomment for local/socket access only, will brick network access
+#port = 3306 # Do not uncomment unless you know what you are doing, can brick your database connectivity
+#socket = /var/lib/mysql/mysql.sock # Same note as above
+socket = /run/mysqld/mysqld.sock
 
+# Stuff to tune for your hardware
+max_connections=2000 # If you have a dedicated database, change this to 2000
+key_buffer_size = 12G # Increase to be approximately 60% of system RAM when you have more then 8GB in the system
+
+# In general most of the below settings don't need tuning
 log-error = /var/log/mysqld/mysqld.log
-
-query-cache-type = 1
-query-cache-size = 32M
-
-long_query_time = 1
-#slow_query_log = 1
-#slow_query_log_file = /var/log/mysqld/slow-queries.log
-
-tmp_table_size = 128M
-table_cache = 1024
-
-join_buffer_size = 1M
-key_buffer = 512M
-sort_buffer_size = 6M
+long_query_time = 3
+slow_query_log = 1
+slow_query_log_file = /var/log/mysqld/slow-queries.log
+log-slow-verbosity=query_plan,explain
+#secure_file_priv = /var/lib/mysql-files # Only allow LOAD DATA INFILE from this directory as a security feature
+log_bin = /var/lib/mysql/mysql-bin
+binlog_format=mixed
+binlog_direct_non_transactional_updates=1
+relay_log=/var/lib/mysql/mysql-relay-bin
+datadir = /var/lib/mysql
+server-id = 1 # Master should be 1, and all slaves should have a unique ID number
+slave-skip-errors = 1032,1690,1062
+slave_parallel_threads=20
+slave-parallel-mode=optimistic
+slave_parallel_max_queued=2M
+skip-external-locking
+skip-name-resolve
+connect_timeout=60
+max_allowed_packet = 16M
+table_open_cache = 4096
+table_definition_cache=16384
+sort_buffer_size = 4M
+net_buffer_length = 8K
 read_buffer_size = 4M
 read_rnd_buffer_size = 16M
-myisam_sort_buffer_size = 64M
+myisam_sort_buffer_size = 128M
+query-cache-size = 0
+expire_logs_days = 3
+concurrent_insert = 2
+myisam_repair_threads = 4
+myisam_recover_option=DEFAULT
+tmpdir = /tmp/
+thread_cache_size = 100
+join_buffer_size = 1M
+myisam_use_mmap=1
+open_files_limit=24576
+max_heap_table_size=512M
+tmp_table_size = 32M
+key_cache_segments=64
+sql_mode=NO_ENGINE_SUBSTITUTION
+log_warnings=1 # Silence the noise!!!
 
-max_tmp_tables = 64
-
-thread_cache_size = 8
-thread_concurrency = 8
+#old_passwords = 0
+#ft_min_word_len = 3
+#query-cache-type = 1
+#table_cache = 1024
+#max_tmp_tables = 64
+#thread_concurrency = 8
+#no-auto-rehash
+default-storage-engine=MyISAM
 
 # If using replication, uncomment log-bin below
 #log-bin = mysql-bin
+
+### By default only replicate the 'asterisk' database for ViciDial, comment out to replicate everything
+### Make sure you do a full database dump if not just replicating asterisk database
+#replicate_do_db=asterisk
+
+### Comment out the tables below here if you really need them replicated to the slave, these are PERFORMANCE HOGS!
+### Most of these tables are MEMORY tables which aren't persistent or used solely as tables for tracking the progress
+### of things temporarily before doing real things like log inserts or lead updates
+#replicate-ignore-table=asterisk.vicidial_live_agents
+#replicate-ignore-table=asterisk.live_sip_channels
+#replicate-ignore-table=asterisk.live_channels
+#replicate-ignore-table=asterisk.vicidial_auto_calls
+#replicate-ignore-table=asterisk.server_updater
+#replicate-ignore-table=asterisk.web_client_sessions
+#replicate-ignore-table=asterisk.vicidial_hopper
+#replicate-ignore-table=asterisk.vicidial_campaign_server_status
+#replicate-ignore-table=asterisk.parked_channels
+#replicate-ignore-table=asterisk.vicidial_manager
+#replicate-ignore-table=asterisk.cid_channels_recent
+#replicate-wild-ignore-table=asterisk.cid_channels_recent_%
+
+
+### Yes, we need this for system tables, so no need to tune anything here for ViciDial settings, these are just for the mysql tables and internal stuff
+innodb_buffer_pool_size = 128M
+innodb_file_format = Barracuda # Deprecated in future releases as this is the only supported format, eventually
+innodb_file_per_table = ON
+innodb_flush_method=O_DIRECT
+innodb_flush_log_at_trx_commit=2
+innodb_log_buffer_size=8M
 
 [mysqldump]
 quick
