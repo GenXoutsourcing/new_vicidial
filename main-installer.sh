@@ -248,7 +248,7 @@ echo "Install Perl"
 yum install -y perl-CPAN perl-YAML perl-CPAN-DistnameInfo perl-libwww-perl perl-DBI perl-DBD-MySQL perl-GD perl-Env perl-Term-ReadLine-Gnu perl-SelfLoader perl-open.noarch 
 
 #CPM install
-cd /usr/src/vicidial-install-scripts
+cd /usr/src/new_vicidial
 curl -fsSL https://raw.githubusercontent.com/skaji/cpm/main/cpm | perl - install -g App::cpm
 /usr/local/bin/cpm install -g
 
@@ -518,7 +518,7 @@ cat <<CRONTAB>> /root/crontab-file
 0 2 * * * /usr/share/astguiclient/ADMIN_backup.pl
 
 ###certbot renew
-@monthly /usr/src/vicidial-install-scripts/certbot.sh
+@monthly /usr/src/new_vicidial/certbot.sh
 
 ### recording mixing/compressing/ftping scripts
 #0,3,6,9,12,15,18,21,24,27,30,33,36,39,42,45,48,51,54,57 * * * * /usr/share/astguiclient/AST_CRON_audio_1_move_mix.pl
@@ -838,18 +838,6 @@ tee -a ~/.bashrc <<EOF
 EOF
 
 
-sed -i 's|#Banner none|Banner /etc/ssh/sshd_banner|g' /etc/ssh/sshd_config
-
-
-tee -a /etc/ssh/sshd_banner <<EOF
-Thank you for choosing CyburDial and carpenox's auto installer!
-
-Visit our Knowledge Base at https://www.dialer.one
-
-Support: info@dialer.one
-Skype Live Chat Support: https://join.skype.com/ujkQ7i5lV78O
-EOF
-
 ## Remove debug kernel
 dnf remove kernel-debug* -y
 
@@ -881,7 +869,7 @@ EOF
 ##EOF
 
 ##confbridge fix
-cd /usr/src/vicidial-install-scripts/
+cd /usr/src/new_vicidial/
 yes | cp -rf extensions.conf /etc/asterisk/extensions.conf
 mv confbridge-vicidial.conf /etc/asterisk/
 
@@ -899,7 +887,7 @@ cat <<WELCOME>> /var/www/html/index.html
 Please Hold while I redirect you!
 WELCOME
 
-#cd /usr/src/vicidial-install-scripts
+#cd /usr/src/new_vicidial
 #chmod +x confbridges.sh
 #./confbridges.sh
 
@@ -921,7 +909,7 @@ EOF
 yum in certbot -y
 systemctl enable certbot-renew.timer
 systemctl start certbot-renew.timer
-cd /usr/src/vicidial-install-scripts
+cd /usr/src/new_vicidial
 chmod +x vicidial-enable-webrtc.sh
 service firewalld stop
 ./vicidial-enable-webrtc.sh
@@ -929,12 +917,12 @@ service firewalld start
 systemctl enable firewalld
 
 firewall-cmd --add-service=http --permanent --zone=trusted
-chmod +x /usr/src/vicidial-install-scripts/certbot.sh
+chmod +x /usr/src/new_vicidial/certbot.sh
 
 chmod -R 777 /var/spool/asterisk/
 chown -R apache:apache /var/spool/asterisk/
 
-## mv /usr/src/vicidial-install-scripts/viciportal-ssl.conf /home/viciportal-ssl.conf
+## mv /usr/src/new_vicidial/viciportal-ssl.conf /home/viciportal-ssl.conf
 ## sed -i s/DOMAINNAME/"$DOMAINNAME"/g /var/www/vhosts/dynportal/inc/defaults.inc.php
 ## sed -i s/DOMAINNAME/"$DOMAINNAME"/g /home/viciportal-ssl.conf
 
