@@ -107,13 +107,12 @@ user = mysql
 
 [client]
 port = 3306
-socket = /run/mysqld/mysqld.sock
+socket = /var/lib/mysql/mysql.sock
 
 [mysqld]
 #bind-address = 127.0.0.1 # Uncomment for local/socket access only, will brick network access
 #port = 3306 # Do not uncomment unless you know what you are doing, can brick your database connectivity
-#socket = /var/lib/mysql/mysql.sock # Same note as above
-socket = /run/mysqld/mysqld.sock
+socket = /var/lib/mysql/mysql.sock # Same note as above
 
 # Stuff to tune for your hardware
 max_connections=2000 # If you have a dedicated database, change this to 2000
