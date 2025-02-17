@@ -72,7 +72,7 @@ echo "update the Phone tables to set is_webphone to Y deffault"
 mysql -e "use asterisk; ALTER TABLE phones MODIFY COLUMN is_webphone ENUM('Y','N','Y_API_LAUNCH') default 'Y';"
 mysql -e "use asterisk; update phones set template_id='SIP_generic';"
 
-mv /usr/src/new_install/viciportal-ssl.conf /home/viciportal-ssl.conf
+mv /usr/src/new_vicidial/viciportal-ssl.conf /home/viciportal-ssl.conf
 sed -i s/DOMAINNAME/"$DOMAINNAME"/g /var/www/vhosts/dynportal/inc/defaults.inc.php
 sed -i s/DOMAINNAME/"$DOMAINNAME"/g /home/viciportal-ssl.conf
 mv -f /home/viciportal-ssl.conf /etc/httpd/conf.d/viciportal-ssl.conf
