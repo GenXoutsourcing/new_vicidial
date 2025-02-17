@@ -759,6 +759,8 @@ Alias /RECORDINGS/MP3 "/var/spool/asterisk/monitorDONE/MP3/"
     AllowOverride None
     Require all granted
 </Directory>
+Timeout 600
+
 EOF
 
 ##Install Sounds
