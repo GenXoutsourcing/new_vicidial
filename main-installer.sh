@@ -69,6 +69,10 @@ systemctl enable cockpit.socket
 
 sudo sed -i 's/#PermitRootLogin prohibit-password/PermitRootLogin yes/' /etc/ssh/sshd_config
 
+yum in -y sqlite-devel httpd mod_ssl nano chkconfig htop atop mytop iftop
+yum in -y libedit-devel uuid* libxml2* speex-devel speex* postfix dovecot s-nail roundcubemail inxi
+dnf install -y mariadb-server mariadb
+
 tee -a /etc/php.ini <<EOF
 
 error_reporting  =  E_ALL & ~E_NOTICE
@@ -86,9 +90,7 @@ EOF
 
 systemctl restart httpd
 
-yum in -y sqlite-devel httpd mod_ssl nano chkconfig htop atop mytop iftop
-yum in -y libedit-devel uuid* libxml2* speex-devel speex* postfix dovecot s-nail roundcubemail inxi
-dnf install -y mariadb-server mariadb
+
 
 dnf -y install dnf-plugins-core
 dnf config-manager --set-enabled powertools
