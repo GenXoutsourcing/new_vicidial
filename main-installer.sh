@@ -690,16 +690,6 @@ chmod +x /etc/rc.d/rc.local
 systemctl enable rc-local
 systemctl start rc-local
 
-### Install cockpit
-yum -y install cockpit cockpit-storaged cockpit-navigator
-sed -i s/root/"#root"/g /etc/cockpit/disallowed-users
-systemctl enable cockpit.socket
-
-##Install CyburPhone
-cd /var/www/html
-git clone https://github.com/carpenox/CyburPhone.git
-chmod -R 744 CyburPhone
-chown -R apache:apache CyburPhone
 
 ##Install Dynportal
 yum install -y firewalld
@@ -827,17 +817,6 @@ sox ../mohmp3/manolo_camp-morning_coffee.wav manolo_camp-morning_coffee.wav vol 
 sox ../mohmp3/manolo_camp-morning_coffee.gsm manolo_camp-morning_coffee.gsm vol 0.25
 sox -t ul -r 8000 -c 1 ../mohmp3/manolo_camp-morning_coffee.ulaw -t ul manolo_camp-morning_coffee.ulaw vol 0.25
 
-tee -a ~/.bashrc <<EOF
-
-# Commands
-/usr/share/astguiclient/ADMIN_keepalive_ALL.pl --cu3way
-/usr/bin/systemctl status httpd --no-pager
-/usr/bin/systemctl status firewalld --no-pager
-/usr/bin/screen -ls
-/usr/sbin/dahdi_cfg -v
-/usr/sbin/asterisk -V
-EOF
-
 
 ## Remove debug kernel
 dnf remove kernel-debug* -y
@@ -927,11 +906,8 @@ chown -R apache:apache /var/spool/asterisk/
 ## sed -i s/DOMAINNAME/"$DOMAINNAME"/g /var/www/vhosts/dynportal/inc/defaults.inc.php
 ## sed -i s/DOMAINNAME/"$DOMAINNAME"/g /home/viciportal-ssl.conf
 
-mysql -e "use asterisk; update system_settings set active_voicemail_server='$ip_address', webphone_url='https://$hostname/CyburPhone/cyburphone.php', sounds_web_server='https://$hostname';"
+mysql -e "use asterisk; update system_settings set active_voicemail_server='$ip_address', webphone_url='https://phone.viciphone.com/viciphone.php', sounds_web_server='https://$hostname';"
 
-cp /etc/letsencrypt/live/$hostname/fullchain.pem /etc/cockpit/ws-certs.d/wildcart.$hostname.cert
-cp /etc/letsencrypt/live/$hostname/privkey.pem /etc/cockpit/ws-certs.d/wildcart.$hostname.key
-systemctl restart cockpit.socket
 
 read -p 'Press Enter to Reboot: '
 
