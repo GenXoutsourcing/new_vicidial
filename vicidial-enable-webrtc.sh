@@ -1,12 +1,6 @@
 #!/bin/bash
 
-echo "Download CyburPhone"
-cd /var/www/html
-git clone https://github.com/carpenox/CyburPhone.git
-chmod -R 744 CyburPhone
-chown -R apache:apache CyburPhone
 
-echo "Install certbot for LetsEncrypt"
 if [ -f /etc/redhat-release ]; then
 	yum -y install certbot python3-certbot-apache mod_ssl
 fi
@@ -41,7 +35,7 @@ mysql -e "use asterisk; update servers set web_socket_url='wss://$DOMAINNAME:808
 
 echo "Add DOMAINAME system_settings webphone_url"
 echo "%%%%%%%%%%%%%%%This Wont work if you SET root Password%%%%%%%%%%%%%%%"
-mysql -e "use asterisk; update system_settings set webphone_url='https://$DOMAINNAME/CyburPhone/cyburphone.php';"
+mysql -e "use asterisk; update system_settings set webphone_url='https://phone.viciphone.com/viciphone.php';"
 
 echo "update the SIP_generic"
 mysql -e "use asterisk; update vicidial_conf_templates set template_contents='type=friend 
