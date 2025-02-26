@@ -838,9 +838,9 @@ WantedBy=multi-user.target
 EOF
 
 ##fstab entry
-tee -a /etc/fstab <<EOF
-none /var/spool/asterisk/monitor tmpfs nodev,nosuid,noexec,nodiratime,size=2G 0 0
-EOF
+#tee -a /etc/fstab <<EOF
+#none /var/spool/asterisk/monitor tmpfs nodev,nosuid,noexec,nodiratime,size=2G 0 0
+#EOF
 
 ## FTP fix
 ##tee -a /etc/ssh/sshd_config << EOF
