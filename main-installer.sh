@@ -47,7 +47,7 @@ yum in -y wget unzip make patch gcc gcc-c++ subversion php php-devel php-gd gd-d
 sleep 2
 yum in -y php-imap php-ldap php-mysqli php-odbc php-pear php-xml php-xmlrpc curl curl-devel perl-libwww-perl ImageMagick 
 sleep 3
-yum in -y newt-devel libxml2-devel kernel-devel sqlite-devel libuuid-devel sox sendmail lame-devel htop iftop perl-File-Which
+yum in -y newt-devel libxml2-devel sqlite-devel libuuid-devel sox sendmail lame-devel htop iftop perl-File-Which
 sleep 2
 yum in -y php-opcache libss7 mariadb-devel libss7* libopen*
 sleep 1
