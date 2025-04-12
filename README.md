@@ -18,7 +18,7 @@ yum update -y --exclude=kernel*
 yum -y install epel-release
 yum update -y --exclude=kernel*
 yum install git -y
-yum install kernel* --exclude=kernel-debug* -y
+###yum install kernel* --exclude=kernel-debug* -y
 
 
 #Disable SELINUX
