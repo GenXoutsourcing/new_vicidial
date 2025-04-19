@@ -63,9 +63,9 @@ dnf config-manager --set-enabled crb
 yum install libsrtp-devel -y
 
 ### Install cockpit
-yum -y install cockpit cockpit-storaged cockpit-navigator
-sed -i s/root/"#root"/g /etc/cockpit/disallowed-users
-systemctl enable cockpit.socket
+#yum -y install cockpit cockpit-storaged cockpit-navigator
+#sed -i s/root/"#root"/g /etc/cockpit/disallowed-users
+#systemctl enable cockpit.socket
 
 sudo sed -i 's/#PermitRootLogin prohibit-password/PermitRootLogin yes/' /etc/ssh/sshd_config
 
