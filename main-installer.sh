@@ -95,6 +95,9 @@ systemctl restart httpd
 dnf -y install dnf-plugins-core
 dnf config-manager --set-enabled powertools
 
+yum install sendmail -y
+systemctl start sendmail
+systemctl enable sendmail
 
 systemctl enable mariadb
 
