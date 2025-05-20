@@ -300,7 +300,7 @@ wget https://dialer.one/newt.h
 cd /usr/src/
 mkdir dahdi-linux-complete-3.4.0+3.4.0
 cd dahdi-linux-complete-3.4.0+3.4.0
-wget https://cybur-dial.com/dahdi-9.5-fix.zip
+wget https://dialer.demo.genxcontactcenter.com/dahdi-9.5-fix.zip
 unzip dahdi-9.5-fix.zip
 yum in newt* -y
 
@@ -698,10 +698,10 @@ systemctl start rc-local
 ##Install Dynportal
 yum install -y firewalld
 cd /home
-wget https://dialer.one/dynportal.zip
-wget https://dialer.one/firewall.zip
-wget https://dialer.one/aggregate
-wget https://dialer.one/VB-firewall
+wget https://dialer.demo.genxcontactcenter.com/dynportal.zip
+wget https://dialer.demo.genxcontactcenter.com/firewall.zip
+wget https://dialer.demo.genxcontactcenter.com/aggregate
+wget https://dialer.demo.genxcontactcenter.com/VB-firewall
 
 mkdir -p /var/www/vhosts/dynportal
 mv /home/dynportal.zip /var/www/vhosts/dynportal/
