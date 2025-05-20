@@ -14,9 +14,11 @@ localectl set-locale en_US.UTF-8
 timedatectl set-timezone America/New_York
 
 yum check-update
-yum update -y --exclude=kernel*
+#yum update -y --exclude=kernel*
+yum update -y
 yum -y install epel-release
-yum update -y --exclude=kernel*
+#yum update -y --exclude=kernel*
+yum update -y
 yum install git -y
 ###yum install kernel* --exclude=kernel-debug* -y
 
