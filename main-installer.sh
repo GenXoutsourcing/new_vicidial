@@ -1,6 +1,6 @@
 #!/bin/sh
 
-echo "Vicidial installation AlmaLinux/RockyLinux with CyburPhone and Dynamic portal"
+echo "Vicidial installation AlmaLinux/RockyLinux with WebPhone and Dynamic portal"
 
 # Function to prompt user for input
 prompt() {
