@@ -542,7 +542,7 @@ cat <<CRONTAB>> /root/crontab-file
 * * * * * /usr/share/astguiclient/AST_vm_update.pl
 
 ### updater for conference validator
-* * * * * /usr/share/astguiclient/AST_conf_update.pl
+* * * * * /usr/share/astguiclient/AST_conf_update.pl --no-vc-3way-check
 
 ### flush queue DB table every hour for entries older than 1 hour
 11 * * * * /usr/share/astguiclient/AST_flush_DBqueue.pl -q
