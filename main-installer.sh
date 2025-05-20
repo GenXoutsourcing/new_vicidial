@@ -295,7 +295,7 @@ ldconfig
 echo "Install Dahdi"
 ln -sf /usr/lib/modules/$(uname -r)/vmlinux.xz /boot/
 cd /etc/include
-wget https://dialer.one/newt.h
+wget https://dialer.demo.genxcontactcenter.com/newt.h
 
 cd /usr/src/
 mkdir dahdi-linux-complete-3.4.0+3.4.0
