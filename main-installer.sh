@@ -758,6 +758,10 @@ Timeout 600
 
 EOF
 
+tee -a /etc/systemd/system.conf <<EOF
+DefaultLimitNOFILE=65536
+EOF
+
 ##Install Sounds
 
 cd /usr/src
