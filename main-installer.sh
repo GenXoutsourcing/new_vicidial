@@ -52,7 +52,7 @@ yum in -y newt-devel libxml2-devel sqlite-devel libuuid-devel sox sendmail lame-
 sleep 2
 yum in -y php-opcache libss7 mariadb-devel libss7* libopen*
 sleep 1
-yum in -y initscripts pv python3-pip
+yum in -y initscripts pv python3-pip 
 pip install mysql-connector-python
 yum copr enable irontec/sngrep -y
 dnf install sngrep bind-utils -y
@@ -61,7 +61,7 @@ sudo yum install -y kernel-devel-$(uname -r) kernel-headers-$(uname -r)
 
 dnf --enablerepo=crb install libsrtp-devel -y
 dnf config-manager --set-enabled crb
-yum install libsrtp-devel -y
+yum install libsrtp-devel ftp vsftpd -y
 
 ### Install cockpit
 #yum -y install cockpit cockpit-storaged cockpit-navigator
