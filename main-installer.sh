@@ -622,6 +622,8 @@ cat <<CRONTAB>> /root/crontab-file
 * * * * * sleep 40; /usr/bin/VB-firewall --white --dynamic --quiet
 * * * * * sleep 50; /usr/bin/VB-firewall --white --dynamic --quiet
 
+### url log delete
+30 23 * * * /usr/share/astguiclient/ADMIN_archive_log_tables.pl --url-log-only --url-log-days=30
 
 CRONTAB
 
