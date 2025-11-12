@@ -3,25 +3,18 @@
 ## Copy & Paste the part blow:
 
 ```
-# Install english language pack
 dnf install -y glibc-langpack-en
 
-# Configure new locale. This basically just edits /etc/locale.conf
 localectl set-locale en_US.UTF-8
 
 timedatectl set-timezone America/New_York
 
 yum check-update
-#yum update -y --exclude=kernel*
 yum update -y
 yum -y install epel-release
-#yum update -y --exclude=kernel*
 yum update -y
 yum install git -y
-###yum install kernel* --exclude=kernel-debug* -y
 
-
-#Disable SELINUX
 sed -i 's/SELINUX=enforcing/SELINUX=disabled/g' /etc/selinux/config    
 
 cd /usr/src/
