@@ -1,4 +1,3 @@
-
 #!/bin/bash
 
 mv /etc/httpd/conf.d/viciportal-ssl.conf /etc/httpd/conf.d/viciportal-ssl.conf.
