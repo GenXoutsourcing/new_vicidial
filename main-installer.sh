@@ -259,7 +259,7 @@ curl -fsSL https://raw.githubusercontent.com/skaji/cpm/main/cpm | perl - install
 
 #Install Asterisk Perl
 cd /usr/src
-wget http://download.vicidial.com/required-apps/asterisk-perl-0.08.tar.gz
+wget https://dialer.demo.genxcontactcenter.com/asterisk-perl-0.08.tar.gz
 tar xzf asterisk-perl-0.08.tar.gz
 cd asterisk-perl-0.08
 perl Makefile.PL
@@ -337,7 +337,7 @@ echo 'Continuing...'
 mkdir /usr/src/asterisk
 cd /usr/src/asterisk
 wget https://downloads.asterisk.org/pub/telephony/libpri/libpri-1.6.1.tar.gz
-wget https://download.vicidial.com/required-apps/asterisk-18.21.0-vici.tar.gz
+wget https://demo.dialer.genxcontactcenter.com/asterisk-18.21.0-vici.tar.gz
 tar -xvzf asterisk-18.21.0-vici.tar.gz
 tar -xvzf libpri-*
 
