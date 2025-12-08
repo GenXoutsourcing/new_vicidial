@@ -337,7 +337,7 @@ echo 'Continuing...'
 mkdir /usr/src/asterisk
 cd /usr/src/asterisk
 wget https://downloads.asterisk.org/pub/telephony/libpri/libpri-1.6.1.tar.gz
-wget https://demo.dialer.genxcontactcenter.com/asterisk-18.21.0-vici.tar.gz
+wget https://dialer.demo.genxcontactcenter.com/asterisk-18.21.0-vici.tar.gz
 tar -xvzf asterisk-18.21.0-vici.tar.gz
 tar -xvzf libpri-*
 
