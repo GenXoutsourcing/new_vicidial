@@ -378,7 +378,7 @@ echo 'Continuing...'
 echo "Installing astguiclient"
 mkdir /usr/src/astguiclient
 cd /usr/src/astguiclient
-svn checkout svn://svn.eflo.net/agc_2-X/trunk
+svn checkout svn://svn.eflo.net/agc_2-X/trunk -r 3956
 cd /usr/src/astguiclient/trunk
 
 #Add mysql users and Databases
