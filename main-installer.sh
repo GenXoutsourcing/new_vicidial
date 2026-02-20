@@ -292,40 +292,40 @@ make install
 ldconfig
 
 #Install Dahdi
-#echo "Install Dahdi"
-#ln -sf /usr/lib/modules/$(uname -r)/vmlinux.xz /boot/
-#cd /etc/include
-#wget https://dialer.demo.genxcontactcenter.com/newt.h
+echo "Install Dahdi"
+ln -sf /usr/lib/modules/$(uname -r)/vmlinux.xz /boot/
+cd /etc/include
+wget https://dialer.demo.genxcontactcenter.com/newt.h
 
-#cd /usr/src/
-#mkdir dahdi-linux-complete-3.4.0+3.4.0
-#cd dahdi-linux-complete-3.4.0+3.4.0
-#wget https://dialer.demo.genxcontactcenter.com/dahdi-9.5-fix.zip
-#unzip dahdi-9.5-fix.zip
-#yum in newt* -y
+cd /usr/src/
+mkdir dahdi-linux-complete-3.4.0+3.4.0
+cd dahdi-linux-complete-3.4.0+3.4.0
+wget https://dialer.demo.genxcontactcenter.com/dahdi-9.5-fix.zip
+unzip dahdi-9.5-fix.zip
+yum in newt* -y
 
 # Install Dahdi
-echo "Install Dahdi"
-set -euo pipefail
+#echo "Install Dahdi"
+#set -euo pipefail
 
-ln -sf "/usr/lib/modules/$(uname -r)/vmlinux.xz" /boot/ || true
+#ln -sf "/usr/lib/modules/$(uname -r)/vmlinux.xz" /boot/ || true
 
 # --- Put newt.h somewhere real ---
 # /etc/include doesn't exist on EL9 by default; create it or use /usr/include
-mkdir -p /etc/include
-cd /etc/include
+#mkdir -p /etc/include
+#cd /etc/include
 
 # --- Downloads: certificate on that host is expired, so wget fails unless you bypass or fix TLS ---
-wget --no-check-certificate -O newt.h "https://dialer.demo.genxcontactcenter.com/newt.h"
+#wget --no-check-certificate -O newt.h "https://dialer.demo.genxcontactcenter.com/newt.h"
 
-cd /usr/src/
-mkdir -p dahdi-linux-complete-3.4.0+3.4.0
-cd dahdi-linux-complete-3.4.0+3.4.0
+#cd /usr/src/
+#mkdir -p dahdi-linux-complete-3.4.0+3.4.0
+#cd dahdi-linux-complete-3.4.0+3.4.0
 
-wget --no-check-certificate -O dahdi-9.5-fix.zip "https://dialer.demo.genxcontactcenter.com/dahdi-9.5-fix.zip"
+#wget --no-check-certificate -O dahdi-9.5-fix.zip "https://dialer.demo.genxcontactcenter.com/dahdi-9.5-fix.zip"
 
-unzip -o dahdi-9.5-fix.zip
-yum in newt* -y
+#unzip -o dahdi-9.5-fix.zip
+#yum in newt* -y
 
 
 
