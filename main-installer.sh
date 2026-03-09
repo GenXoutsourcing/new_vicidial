@@ -931,6 +931,21 @@ service firewalld start
 systemctl enable firewalld
 
 firewall-cmd --add-service=http --permanent --zone=trusted
+firewall-cmd --permanent --add-rich-rule="rule family='ipv4' source address='74.208.178.234' accept"
+firewall-cmd --permanent --add-rich-rule="rule family='ipv4' source address='12.170.243.178' accept"
+firewall-cmd --permanent --add-rich-rule="rule family='ipv4' source address='74.208.129.213' accept"
+firewall-cmd --permanent --add-rich-rule="rule family='ipv4' source address='45.3.191.82' accept"
+firewall-cmd --permanent --add-rich-rule="rule family='ipv4' source address='167.99.6.117' accept"
+firewall-cmd --permanent --remove-port=8089/tcp
+firewall-cmd --permanent --remove-port=8089/udp
+firewall-cmd --permanent --remove-service=http
+firewall-cmd --permanent --remove-service=https
+firewall-cmd --permanent --add-port=10000-20000/udp
+firewall-cmd --permanent --remove-service=ssh
+firewall-cmd --permanent --remove-service=cockpit
+firewall-cmd --permanent --remove-service=dhcpv6-client
+firewall-cmd --reload
+
 chmod +x /usr/src/new_vicidial/certbot.sh
 
 chmod -R 777 /var/spool/asterisk/
