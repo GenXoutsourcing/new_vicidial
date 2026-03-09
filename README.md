@@ -26,13 +26,7 @@ reboot
   
 
 This first installer is the one I keep most up to date and use personally for all my clients. it is the one I recommend that you use.
-If you do not install the SSL cert during the initiial install, you have to turn the firewall off before trying to do it after a reboot. Dont forget to turn it back on. Also, by default the firewall will leave port 443 open to the public, so you can login and change the default password. Make sure you remove it from the public zone once your setup is done. Check this article for use of firewalld: https://dialer.one/index.php/how-to-use-firewalld-via-command-line/
-
-# AI AMD - We also offer AI Driven Answering Machine Detection(AMD) available, email info@cyburdial.com for more info.
-
-# Follow this article for post install: https://dialer.one/index.php/how-to-use-the-full-functionality-of-the-vicidial-installer-by-carpenox/
-
-# NEW main installer to use for Alma/Rocky 9 w/ Dynamic portal, WebPhone, SSL cert & Asterisk 18 with Confbridges
+If you do not install the SSL cert during the initiial install, you have to turn the firewall off before trying to do it after a reboot. Dont forget to turn it back on. Also, by default the firewall will leave port 443 open to the public, so you can login and change the default password. Make sure you remove it from the public zone once your setup is done. 
 
 ```
 cd /usr/src/new_vicidial
