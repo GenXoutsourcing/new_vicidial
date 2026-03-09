@@ -37,7 +37,7 @@ chmod +x main-installer.sh
 # Above installer for addon servers
 
 ```
-cd /usr/src/vicidial-install-scripts
+cd /usr/src/new_vicidial
 chmod +x main-addon-installer.sh
 ./main-addon-installer.sh
 ```
@@ -69,32 +69,6 @@ chmod +x alma-rocky9-ast18.sh
 
 Make sure you update your SSL cert location in /etc/httpd/conf.d/viciportal-ssl.conf
 
-
-### Alma/Rocky 9 Installer with Dynamic portal, CyburPhone, SSL Cert and Asterisk 16
-
-```
-cd /usr/src/vicidial-install-scripts
-chmod +x alma-rocky9-ast16.sh
-./alma-rocky9-ast16.sh
-```
-
-## Install a default database with everything setup ready to go - Password CyburDial2024 (need to add "a" to phone login on users accounts, oops)
-
-```
-cd /usr/src/vicidial-install-scripts
-chmod +x standard-db.sh
-./standard-db.sh
-```
-
-# See tools section at the bottom for cluster db with 7 servers, 150 users and phones ready to go
-
-### Alma/Rocky 9 Installer with Dynamic portal and CyburPhone with SSL cert with Asterisk 18 for CONTABO ONLY
-
-```
-cd /usr/src/vicidial-install-scripts
-chmod +x alma-rocky-centos-9-ast18-contabo.sh
-./alma-rocky-centos-9-ast18-contabo.sh
-```
 
 ### Alma 8 Add on telephony server for a cluster
 
