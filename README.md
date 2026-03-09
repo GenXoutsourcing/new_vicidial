@@ -34,6 +34,15 @@ chmod +x main-installer.sh
 ./main-installer.sh
 ```
 
+# Above installer for addon servers
+
+```
+cd /usr/src/vicidial-install-scripts
+chmod +x main-addon-installer.sh
+./main-addon-installer.sh
+```
+
+
 # Above installer but with PHP8 instead of PHP7 (Beta Release)
 
 ```
