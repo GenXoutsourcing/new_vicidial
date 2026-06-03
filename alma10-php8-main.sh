@@ -4,6 +4,9 @@
 # DAHDI 3.4.0 core-only build, Dynportal, VB-firewall, custom confbridge, WebRTC helper.
 # No reboot is required between prep and install because kernel updates are excluded before DAHDI.
 # TEST SCRIPT - run first on a disposable/snapshot server.
+# Updated with validated AlmaLinux 10 fixes: PHP 8.3, DAHDI 3.4.0 core-only,
+# perl-DBD-MySQL RPM, Net::Telnet CPAN, full VICIdial crontab, rc.local boot startup,
+# Dynportal/VB-firewall, ConfBridge post-keepalive fix, and custom firewall rules.
 
 set -Eeuo pipefail
 
@@ -130,30 +133,38 @@ dnf -y install "https://dl.fedoraproject.org/pub/epel/epel-release-latest-10.noa
 dnf -y makecache
 
 # PHP 8.3 is expected on EL10. Do not force Remi here.
+# Removed unavailable EL10 packages: php-imap, php-xmlrpc, php-mcrypt, python3-pip, sngrep, inxi.
 dnf -y install \
 php php-cli php-common php-devel php-gd php-curl php-mysqlnd \
 php-ldap php-zip php-fileinfo php-opcache php-mbstring \
-php-imap php-odbc php-pear php-xml php-xmlrpc \
-httpd mod_ssl mariadb-server mariadb mariadb-devel \
+php-odbc php-pear php-xml \
+httpd httpd-tools mod_ssl mariadb-server mariadb mariadb-devel \
 kernel-devel-"$(uname -r)" kernel-headers-"$(uname -r)" elfutils-libelf-devel \
 wget unzip make patch gcc gcc-c++ subversion gd-devel readline-devel \
 curl-devel perl-libwww-perl ImageMagick newt-devel libxml2-devel \
 sqlite-devel libuuid-devel sox sendmail lame-devel htop iftop atop mytop \
-perl-File-Which initscripts pv python3-pip bind-utils firewalld \
-speex-devel postfix dovecot s-nail roundcubemail inxi \
+perl-File-Which initscripts pv bind-utils firewalld \
+speex-devel postfix dovecot s-nail roundcubemail \
 libedit-devel uuid-devel openssl-devel ncurses-devel libtermcap-devel \
-libss7 libss7-devel libsrtp-devel || true
+perl-CPAN perl-YAML perl-CPAN-DistnameInfo perl-DBI perl-DBD-MySQL perl-DBD-MariaDB \
+perl-devel perl-ExtUtils-MakeMaker perl-GD perl-Env perl-Term-ReadLine-Gnu \
+perl-SelfLoader perl-open.noarch
 
+echo "Installing Python pip safely from a valid working directory"
+cd /root
+python3 -m pip --version || true
+python3 -m ensurepip --upgrade || true
 python3 -m pip install --upgrade pip || true
 python3 -m pip install mysql-connector-python || true
 
-# sngrep via COPR may not be ready for EL10 yet.
-dnf -y copr enable irontec/sngrep || true
-dnf -y install sngrep || true
+echo "Installing Net::Telnet from CPAN; no EL10 RPM package exists"
+PERL_MM_USE_DEFAULT=1 cpan -T -i Net::Telnet || true
+
+# Do not install sngrep on EL10 here; COPR/package not available during testing.
 
 echo "PHP version:"
 php -v || true
-php -m | egrep 'mysqli|mysqlnd|curl|gd|imap|ldap|mbstring|mcrypt|odbc|opcache|xml|zip' || true
+php -m | egrep 'mysqli|mysqlnd|curl|gd|ldap|mbstring|odbc|opcache|xml|zip' || true
 
 # Root SSH login, matching previous installer behavior.
 sed -i 's/^#PermitRootLogin prohibit-password/PermitRootLogin yes/' /etc/ssh/sshd_config || true
@@ -168,7 +179,8 @@ echo "Configuring PHP"
 cat >> /etc/php.ini <<EOF
 
 ; VICIdial installer settings
-error_reporting = E_ALL & ~E_NOTICE
+error_reporting = E_ALL & ~E_NOTICE & ~E_WARNING & ~E_DEPRECATED & ~E_STRICT
+display_errors = Off
 memory_limit = 448M
 short_open_tag = On
 max_execution_time = 3330
@@ -180,7 +192,12 @@ date.timezone = America/New_York
 max_input_vars = 50000
 EOF
 
+sed -i 's/^display_errors = .*/display_errors = Off/' /etc/php.ini || true
+sed -i 's/^error_reporting = .*/error_reporting = E_ALL \& ~E_NOTICE \& ~E_WARNING \& ~E_DEPRECATED \& ~E_STRICT/' /etc/php.ini || true
+
+systemctl enable php-fpm
 systemctl enable httpd
+systemctl restart php-fpm || true
 systemctl restart httpd
 
 # ---------------------------------------------------------------------------
@@ -486,21 +503,28 @@ cd /usr/src/astguiclient
 svn checkout svn://svn.eflo.net/agc_2-X/trunk
 cd /usr/src/astguiclient/trunk
 
-echo "Enter MySQL root password when prompted, or press Enter if none."
-mysql -u root -p << MYSQLCREOF
+echo "Creating/importing VICIdial database"
+mysql -u root <<'MYSQLCREOF'
 CREATE DATABASE IF NOT EXISTS asterisk DEFAULT CHARACTER SET utf8 COLLATE utf8_unicode_ci;
+
 CREATE USER IF NOT EXISTS 'cron'@'localhost' IDENTIFIED BY '1234';
-GRANT SELECT,CREATE,ALTER,INSERT,UPDATE,DELETE,LOCK TABLES on asterisk.* TO cron@'%' IDENTIFIED BY '1234';
-GRANT SELECT,CREATE,ALTER,INSERT,UPDATE,DELETE,LOCK TABLES on asterisk.* TO cron@localhost IDENTIFIED BY '1234';
-GRANT RELOAD ON *.* TO cron@'%';
-GRANT RELOAD ON *.* TO cron@localhost;
+CREATE USER IF NOT EXISTS 'cron'@'%' IDENTIFIED BY '1234';
 CREATE USER IF NOT EXISTS 'custom'@'localhost' IDENTIFIED BY 'custom1234';
-GRANT SELECT,CREATE,ALTER,INSERT,UPDATE,DELETE,LOCK TABLES on asterisk.* TO custom@'%' IDENTIFIED BY 'custom1234';
-GRANT SELECT,CREATE,ALTER,INSERT,UPDATE,DELETE,LOCK TABLES on asterisk.* TO custom@localhost IDENTIFIED BY 'custom1234';
-GRANT RELOAD ON *.* TO custom@'%';
-GRANT RELOAD ON *.* TO custom@localhost;
+CREATE USER IF NOT EXISTS 'custom'@'%' IDENTIFIED BY 'custom1234';
+
+GRANT SELECT,CREATE,ALTER,INSERT,UPDATE,DELETE,LOCK TABLES ON asterisk.* TO 'cron'@'localhost';
+GRANT SELECT,CREATE,ALTER,INSERT,UPDATE,DELETE,LOCK TABLES ON asterisk.* TO 'cron'@'%';
+GRANT RELOAD ON *.* TO 'cron'@'localhost';
+GRANT RELOAD ON *.* TO 'cron'@'%';
+
+GRANT SELECT,CREATE,ALTER,INSERT,UPDATE,DELETE,LOCK TABLES ON asterisk.* TO 'custom'@'localhost';
+GRANT SELECT,CREATE,ALTER,INSERT,UPDATE,DELETE,LOCK TABLES ON asterisk.* TO 'custom'@'%';
+GRANT RELOAD ON *.* TO 'custom'@'localhost';
+GRANT RELOAD ON *.* TO 'custom'@'%';
+
 FLUSH PRIVILEGES;
 SET GLOBAL connect_timeout=60;
+
 USE asterisk;
 SOURCE /usr/src/astguiclient/trunk/extras/MySQL_AST_CREATE_tables.sql;
 SOURCE /usr/src/astguiclient/trunk/extras/first_server_install.sql;
@@ -552,7 +576,7 @@ VARfastagi_log_max_requests => 1000
 VARfastagi_log_checkfordead => 30
 VARfastagi_log_checkforwait => 60
 
-ExpectedDBSchema => 1720
+ExpectedDBSchema => 1743
 ASTGUI
 
 perl install.pl --no-prompt --copy_sample_conf_files=Y
@@ -592,32 +616,92 @@ cat > /root/crontab-file <<'CRONTAB'
 @weekly /usr/src/new_vicidial/certbot.sh
 
 ### recording mixing/compressing/ftping scripts
+#0,3,6,9,12,15,18,21,24,27,30,33,36,39,42,45,48,51,54,57 * * * * /usr/share/astguiclient/AST_CRON_audio_1_move_mix.pl
 0,3,6,9,12,15,18,21,24,27,30,33,36,39,42,45,48,51,54,57 * * * * /usr/share/astguiclient/AST_CRON_audio_1_move_mix.pl --MIX
 0,3,6,9,12,15,18,21,24,27,30,33,36,39,42,45,48,51,54,57 * * * * /usr/share/astguiclient/AST_CRON_audio_1_move_VDonly.pl
 1,4,7,10,13,16,19,22,25,28,31,34,37,40,43,46,49,52,55,58 * * * * /usr/share/astguiclient/AST_CRON_audio_2_compress.pl --MP3 --HTTPS
+#2,5,8,11,14,17,20,23,26,29,32,35,38,41,44,47,50,53,56,59 * * * * /usr/share/astguiclient/AST_CRON_audio_3_ftp.pl --MP3 --nodatedir --ftp-validate
 
 ### keepalive script for astguiclient processes
 * * * * * /usr/share/astguiclient/ADMIN_keepalive_ALL.pl --cu3way
+
+### kill Hangup script for Asterisk updaters
 * * * * * /usr/share/astguiclient/AST_manager_kill_hung_congested.pl
+
+### updater for voicemail
 * * * * * /usr/share/astguiclient/AST_vm_update.pl
+
+### updater for conference validator
 * * * * * /usr/share/astguiclient/AST_conf_update.pl --no-vc-3way-check
+
+### flush queue DB table every hour for entries older than 1 hour
 11 * * * * /usr/share/astguiclient/AST_flush_DBqueue.pl -q
+
+### fix the vicidial_agent_log once every hour and the full day run at night
 33 * * * * /usr/share/astguiclient/AST_cleanup_agent_log.pl
 50 0 * * * /usr/share/astguiclient/AST_cleanup_agent_log.pl --last-24hours
+
+## uncomment below if using QueueMetrics
+#*/5 * * * * /usr/share/astguiclient/AST_cleanup_agent_log.pl --only-qm-live-call-check
+
+## uncomment below if using Vtiger
+#1 1 * * * /usr/share/astguiclient/Vtiger_optimize_all_tables.pl --quiet
+
+### updater for VICIDIAL hopper
 * * * * * /usr/share/astguiclient/AST_VDhopper.pl -q
+
+### adjust the GMT offset for the leads in the vicidial_list table
 1 1,7 * * * /usr/share/astguiclient/ADMIN_adjust_GMTnow_on_leads.pl --debug
+
+### reset several temporary-info tables in the database
 2 1 * * * /usr/share/astguiclient/AST_reset_mysql_vars.pl
+
+### optimize the database tables within the asterisk database
 3 1 * * * /usr/share/astguiclient/AST_DB_optimize.pl
+
+## adjust time on the server with ntp
+#30 * * * * /usr/sbin/ntpdate -u pool.ntp.org 2>/dev/null 1>&amp;2
+
+### VICIDIAL agent time log weekly and daily summary report generation
 2 0 * * 0 /usr/share/astguiclient/AST_agent_week.pl
 22 0 * * * /usr/share/astguiclient/AST_agent_day.pl
+
+### VICIDIAL campaign export scripts (OPTIONAL)
+#32 0 * * * /usr/share/astguiclient/AST_VDsales_export.pl
+#42 0 * * * /usr/share/astguiclient/AST_sourceID_summary_export.pl
+
+### remove old recordings
+#24 0 * * * /usr/bin/find /var/spool/asterisk/monitorDONE -maxdepth 2 -type f -mtime +7 -print | xargs rm -f
+#26 1 * * * /usr/bin/find /var/spool/asterisk/monitorDONE/MP3 -maxdepth 2 -type f -mtime +65 -print | xargs rm -f
+#25 1 * * * /usr/bin/find /var/spool/asterisk/monitorDONE/FTP -maxdepth 2 -type f -mtime +1 -print | xargs rm -f
 24 1 * * * /usr/bin/find /var/spool/asterisk/monitorDONE/ORIG -maxdepth 2 -type f -mtime +1 -print | xargs rm -f
+
+
+### roll logs monthly on high-volume dialing systems
 30 1 1 * * /usr/share/astguiclient/ADMIN_archive_log_tables.pl --DAYS=45
+
+### remove old vicidial logs and asterisk logs more than 2 days old
 28 0 * * * /usr/bin/find /var/log/astguiclient -maxdepth 1 -type f -mtime +2 -print | xargs rm -f
 29 0 * * * /usr/bin/find /var/log/asterisk -maxdepth 3 -type f -mtime +2 -print | xargs rm -f
 30 0 * * * /usr/bin/find / -maxdepth 1 -name "screenlog.0*" -mtime +4 -print | xargs rm -f
+
+### cleanup of the scheduled callback records
 25 0 * * * /usr/share/astguiclient/AST_DB_dead_cb_purge.pl --purge-non-cb -q
+
+### GMT adjust script - uncomment to enable
+#45 0 * * * /usr/share/astguiclient/ADMIN_adjust_GMTnow_on_leads.pl --list-settings
+
+### Dialer Inventory Report
 1 7 * * * /usr/share/astguiclient/AST_dialer_inventory_snapshot.pl -q --override-24hours
+
+### inbound email parser
 * * * * * /usr/share/astguiclient/AST_inbound_email_parser.pl
+
+### Daily Reboot
+#30 6 * * * /sbin/reboot
+
+######TILTIX GARBAGE FILES DELETE
+#00 22 * * * root cd /tmp/ && find . -name '*TILTXtmp*' -type f -delete
 
 ### Dynportal
 @reboot /usr/bin/VB-firewall --whitelist=ViciWhite --dynamic --quiet
@@ -648,6 +732,7 @@ cat > /etc/rc.d/rc.local <<'EOF'
 /usr/bin/setterm -powerdown || true
 
 systemctl start mariadb.service
+systemctl start php-fpm.service
 systemctl start httpd.service
 
 /usr/share/astguiclient/ADMIN_restart_roll_logs.pl || true
@@ -668,6 +753,8 @@ cat > /etc/systemd/system/rc-local.service <<'EOF'
 [Unit]
 Description=/etc/rc.local Compatibility
 ConditionPathExists=/etc/rc.d/rc.local
+After=network-online.target mariadb.service httpd.service php-fpm.service
+Wants=network-online.target
 
 [Service]
 Type=oneshot
@@ -699,8 +786,8 @@ download_file "$AGGREGATE_URL" "aggregate"
 download_file "$VB_FIREWALL_URL" "VB-firewall"
 
 mkdir -p /var/www/vhosts/dynportal
-mv -f /home/dynportal.zip /var/www/vhosts/dynportal/
-mv -f /home/firewall.zip /etc/firewalld/
+\cp -f /home/dynportal.zip /var/www/vhosts/dynportal/
+\cp -f /home/firewall.zip /etc/firewalld/
 
 cd /var/www/vhosts/dynportal/
 unzip -o dynportal.zip
@@ -708,7 +795,10 @@ chmod -R 755 .
 chown -R apache:apache .
 
 if [[ -f etc/httpd/conf.d/viciportal.conf ]]; then
-    mv -f etc/httpd/conf.d/viciportal.conf /etc/httpd/conf.d/
+    \cp -f etc/httpd/conf.d/viciportal.conf /etc/httpd/conf.d/
+fi
+if [[ -f etc/httpd/conf.d/viciportal-ssl.conf ]]; then
+    \cp -f etc/httpd/conf.d/viciportal-ssl.conf /etc/httpd/conf.d/
 fi
 
 cd /etc/firewalld/
@@ -720,9 +810,9 @@ if [[ -d zones ]]; then
     mv -f public.xml trusted.xml /etc/firewalld/zones/ 2>/dev/null || true
 fi
 
-mv -f /home/aggregate /usr/bin/
+\cp -f /home/aggregate /usr/bin/
 chmod +x /usr/bin/aggregate
-mv -f /home/VB-firewall /usr/bin/
+\cp -f /home/VB-firewall /usr/bin/
 chmod +x /usr/bin/VB-firewall
 
 firewall-offline-cmd --add-port=446/tcp --zone=public || true
@@ -826,39 +916,58 @@ do
 done
 
 # ---------------------------------------------------------------------------
-# Custom confbridge / WebRTC helper section
+# Custom ConfBridge / WebRTC helper section
 # ---------------------------------------------------------------------------
-echo "Applying custom confbridge and WebRTC helper files"
+echo "Applying custom ConfBridge and WebRTC helper files"
 
 if [[ -d /usr/src/new_vicidial ]]; then
     cd /usr/src/new_vicidial
 
-    if [[ -f extensions.conf ]]; then
-        cp -f extensions.conf /etc/asterisk/extensions.conf
-    fi
+    # Do not blindly overwrite /etc/asterisk/extensions.conf.
+    # Replacing the whole file can remove current VICIdial-generated dialplan content.
 
     if [[ -f confbridge-vicidial.conf ]]; then
-        cp -f confbridge-vicidial.conf /etc/asterisk/confbridge-vicidial.conf
-        grep -q "confbridge-vicidial.conf" /etc/asterisk/confbridge.conf || \
-        echo "#include confbridge-vicidial.conf" >> /etc/asterisk/confbridge.conf
+        \cp -f confbridge-vicidial.conf /etc/asterisk/confbridge-vicidial.conf
+        grep -q "confbridge-vicidial.conf" /etc/asterisk/confbridge.conf ||         echo '#include "confbridge-vicidial.conf"' >> /etc/asterisk/confbridge.conf
     fi
 
     if [[ -f certbot.sh ]]; then
         chmod +x certbot.sh
     fi
+fi
 
-    if [[ -f vicidial-enable-webrtc.sh ]]; then
-        chmod +x vicidial-enable-webrtc.sh
-        systemctl stop firewalld || true
-        ./vicidial-enable-webrtc.sh || true
-        systemctl start firewalld || true
-    fi
+# Start Asterisk and run keepalive once so VICIdial generates configs, then re-copy ConfBridge
+asterisk || true
+sleep 5
+/usr/share/astguiclient/ADMIN_keepalive_ALL.pl --cu3way || true
+
+if [[ -f /usr/src/new_vicidial/confbridge-vicidial.conf ]]; then
+    \cp -f /usr/src/new_vicidial/confbridge-vicidial.conf /etc/asterisk/confbridge-vicidial.conf
+fi
+
+asterisk -rx "module load app_confbridge.so" || true
+asterisk -rx "reload app_confbridge.so" || true
+asterisk -rx "module reload app_meetme.so" || true
+asterisk -rx "dialplan reload" || true
+asterisk -rx "sip reload" || true
+
+# WebRTC DB updates compatible with SVN 4000/schema 1743.
+mysql -u root -e "USE asterisk;
+UPDATE system_settings SET default_webphone='1', webphone_url='https://phone.viciphone.com/viciphone.php', sounds_web_server='https://${SERVER_HOSTNAME}';
+UPDATE phones SET is_webphone='Y', webphone_dialpad='Y', webphone_auto_answer='Y', webphone_dialbox='Y', webphone_mute='Y', webphone_volume='Y';" || true
+
+if [[ -f /usr/src/new_vicidial/vicidial-enable-webrtc.sh && -f /var/www/vhosts/dynportal/inc/defaults.inc.php ]]; then
+    cd /usr/src/new_vicidial
+    chmod +x vicidial-enable-webrtc.sh
+    ./vicidial-enable-webrtc.sh || true
 fi
 
 cat > /var/www/html/index.html <<'WELCOME'
 <META HTTP-EQUIV=REFRESH CONTENT="1; URL=/vicidial/welcome.php">
 Please Hold while I redirect you!
 WELCOME
+chown apache:apache /var/www/html/index.html || true
+chmod 644 /var/www/html/index.html || true
 
 chkconfig asterisk off || true
 
@@ -896,17 +1005,35 @@ firewall-cmd --reload || true
 chmod -R 777 /var/spool/asterisk/ || true
 chown -R apache:apache /var/spool/asterisk/ || true
 
-mysql -e "USE asterisk; UPDATE system_settings SET active_voicemail_server='${SERVER_IP}', webphone_url='https://phone.viciphone.com/viciphone.php', sounds_web_server='https://${SERVER_HOSTNAME}';" || true
+mysql -u root -e "USE asterisk; UPDATE system_settings SET active_voicemail_server='${SERVER_IP}', default_webphone='1', webphone_url='https://phone.viciphone.com/viciphone.php', sounds_web_server='https://${SERVER_HOSTNAME}';" || true
 
 systemctl daemon-reload
+systemctl enable php-fpm
+systemctl enable httpd
+systemctl enable mariadb
+systemctl enable firewalld
 systemctl enable rc-local.service
+systemctl restart php-fpm || true
 systemctl restart httpd
 systemctl restart mariadb
+systemctl restart firewalld || true
+systemctl start rc-local.service || true
 
 echo "Final DAHDI check:"
 lsmod | grep dahdi || true
 ls -l /dev/dahdi || true
 timeout 10s dahdi_test -v || true
+
+
+echo "Final service validation:"
+systemctl is-enabled mariadb httpd php-fpm rc-local firewalld || true
+systemctl is-active mariadb httpd php-fpm firewalld || true
+asterisk -rx "core show version" || true
+asterisk -rx "sip show peers" || true
+asterisk -rx "module show like app_confbridge" || true
+curl -k -I "https://localhost:446/valid8.php" || true
+curl -I "http://127.0.0.1/vicidial/welcome.php" || true
+crontab -l | grep ADMIN_keepalive_ALL || true
 
 echo "VICIdial AlmaLinux 10 test installer complete."
 read -r -p "Press Enter to reboot, or Ctrl+C to cancel."
