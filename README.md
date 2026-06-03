@@ -32,6 +32,10 @@ If you do not install the SSL cert during the initiial install, you have to turn
 cd /usr/src/new_vicidial
 chmod +x main-installer.sh
 ./main-installer.sh
+
+cd /usr/src/new_vicidial
+chmod +x alma10-php8-main.sh
+./alma10-php8-main.sh
 ```
 
 # Above installer for addon servers
