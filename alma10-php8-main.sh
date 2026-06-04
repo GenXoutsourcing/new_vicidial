@@ -7,6 +7,11 @@
 # Updated with validated AlmaLinux 10 fixes: PHP 8.3, DAHDI 3.4.0 core-only,
 # perl-DBD-MySQL RPM, Net::Telnet CPAN, full VICIdial crontab, rc.local boot startup,
 # Dynportal/VB-firewall, ConfBridge post-keepalive fix, and custom firewall rules.
+# v5 fixes: safe new_vicidial update, no viciportal SSL before certbot, DAHDI clean fix,
+# Asterisk phoneprov dir fix, ip_relay GCC header fixes, safer httpd restarts.
+# v6 fixes: Alma9-compatible firewalld zone restore, explicit Dynportal ipset rules,
+# no broken viciportal SSL before certbot, generated Dynportal SSL vhost after certbot.
+# v7 fixes: keep working firewall rules including 10000-20000/udp plus Dynportal ipsets.
 
 set -Eeuo pipefail
 
@@ -22,6 +27,50 @@ prompt() {
     local input=""
     read -r -p "$prompt_text [$default_value]: " input
     export "$varname=${input:-$default_value}"
+}
+
+disable_broken_viciportal_ssl() {
+    # Apache loads every file in /etc/httpd/conf.d/, even files ending in .disabled.
+    # Move broken viciportal SSL configs completely out of conf.d until certbot exists.
+    mkdir -p /root/disabled-httpd-conf
+    if compgen -G "/etc/httpd/conf.d/viciportal-ssl.conf*" >/dev/null; then
+        mv -f /etc/httpd/conf.d/viciportal-ssl.conf* /root/disabled-httpd-conf/ 2>/dev/null || true
+    fi
+}
+
+safe_restart_httpd() {
+    disable_broken_viciportal_ssl
+    apachectl configtest || true
+    safe_restart_httpd
+}
+
+create_viciportal_ssl_after_certbot() {
+    local cert_file="/etc/letsencrypt/live/${SERVER_HOSTNAME}/fullchain.pem"
+    local key_file="/etc/letsencrypt/live/${SERVER_HOSTNAME}/privkey.pem"
+
+    if [[ -s "$cert_file" && -s "$key_file" ]]; then
+        cat > /etc/httpd/conf.d/viciportal-ssl.conf <<EOF
+<VirtualHost *:446>
+    ServerName ${SERVER_HOSTNAME}
+    DocumentRoot "/var/www/vhosts/dynportal"
+
+    SSLEngine on
+    SSLCertificateFile ${cert_file}
+    SSLCertificateKeyFile ${key_file}
+
+    <Directory "/var/www/vhosts/dynportal">
+        Options Indexes FollowSymLinks
+        AllowOverride All
+        Require all granted
+    </Directory>
+</VirtualHost>
+
+Listen 446
+EOF
+        apachectl configtest && safe_restart_httpd
+    else
+        echo "Certbot certificate not found for ${SERVER_HOSTNAME}; skipping viciportal SSL vhost."
+    fi
 }
 
 require_root() {
@@ -77,8 +126,13 @@ dnf makecache || true
 dnf update -y --exclude=kernel* --exclude=kernel-core* --exclude=kernel-modules* --exclude=kernel-devel* --exclude=kernel-headers* || true
 
 cd /usr/src/
-rm -rf new_vicidial
-git clone https://github.com/GenXoutsourcing/new_vicidial
+if [[ ! -d /usr/src/new_vicidial/.git ]]; then
+    git clone https://github.com/GenXoutsourcing/new_vicidial /usr/src/new_vicidial
+else
+    echo "/usr/src/new_vicidial already exists, not deleting it"
+    cd /usr/src/new_vicidial
+    git pull --ff-only || true
+fi
 
 DEFAULT_HOSTNAME="$(hostname -f 2>/dev/null || hostname || true)"
 prompt SERVER_HOSTNAME "Enter the hostname" "$DEFAULT_HOSTNAME"
@@ -145,7 +199,7 @@ curl-devel perl-libwww-perl ImageMagick newt-devel libxml2-devel \
 sqlite-devel libuuid-devel sox sendmail lame-devel htop iftop atop mytop \
 perl-File-Which initscripts pv bind-utils firewalld \
 speex-devel postfix dovecot s-nail roundcubemail \
-libedit-devel uuid-devel openssl-devel ncurses-devel libtermcap-devel \
+libedit-devel uuid-devel openssl-devel ncurses-devel \
 perl-CPAN perl-YAML perl-CPAN-DistnameInfo perl-DBI perl-DBD-MySQL perl-DBD-MariaDB \
 perl-devel perl-ExtUtils-MakeMaker perl-GD perl-Env perl-Term-ReadLine-Gnu \
 perl-SelfLoader perl-open.noarch
@@ -198,7 +252,7 @@ sed -i 's/^error_reporting = .*/error_reporting = E_ALL \& ~E_NOTICE \& ~E_WARNI
 systemctl enable php-fpm
 systemctl enable httpd
 systemctl restart php-fpm || true
-systemctl restart httpd
+safe_restart_httpd
 
 # ---------------------------------------------------------------------------
 # Sendmail / MariaDB
@@ -300,7 +354,8 @@ mkdir -p /var/log/mysqld
 touch /var/log/mysqld/slow-queries.log
 chown -R mysql:mysql /var/log/mysqld
 systemctl restart mariadb
-systemctl restart httpd
+systemctl restart php-fpm || true
+safe_restart_httpd
 
 # ---------------------------------------------------------------------------
 # Perl modules
@@ -419,7 +474,7 @@ sed -i 's/static int chan_match(struct device \*dev, struct device_driver \*driv
 # Keep this available if core DAHDI ever exposes from_timer errors in a future kernel.
 grep -n "^obj-\$(DAHDI_BUILD_ALL)" "$KBUILD" || true
 
-make clean
+make -C linux clean || true
 make -j"$(nproc)"
 make install
 make install-config
@@ -427,7 +482,7 @@ depmod -a
 
 # Do not install dahdi-tools-libs RPM. We are building DAHDI tools from source.
 cd "$DAHDI_DIR/tools"
-make clean
+make clean || true
 make -j"$(nproc)"
 make install
 make install-config
@@ -485,6 +540,19 @@ make menuselect/menuselect menuselect-tree menuselect.makeopts
 menuselect/menuselect --enable app_meetme menuselect.makeopts || true
 menuselect/menuselect --enable res_http_websocket menuselect.makeopts || true
 menuselect/menuselect --enable res_srtp menuselect.makeopts || true
+
+mkdir -p /var/lib/asterisk
+mkdir -p /var/lib/asterisk/phoneprov
+mkdir -p /var/lib/asterisk/sounds
+mkdir -p /var/lib/asterisk/moh
+mkdir -p /var/lib/asterisk/static-http
+mkdir -p /var/lib/asterisk/images
+mkdir -p /var/lib/asterisk/documentation
+mkdir -p /var/lib/asterisk/rest-api
+mkdir -p /var/spool/asterisk
+mkdir -p /var/spool/asterisk/voicemail/default/1234/INBOX
+chown -R asterisk:asterisk /var/lib/asterisk 2>/dev/null || true
+chown -R asterisk:asterisk /var/spool/asterisk 2>/dev/null || true
 
 make samples
 sed -i 's|noload = chan_sip.so|;noload = chan_sip.so|g' /etc/asterisk/modules.conf || true
@@ -660,7 +728,7 @@ cat > /root/crontab-file <<'CRONTAB'
 3 1 * * * /usr/share/astguiclient/AST_DB_optimize.pl
 
 ## adjust time on the server with ntp
-#30 * * * * /usr/sbin/ntpdate -u pool.ntp.org 2>/dev/null 1>&amp;2
+#30 * * * * /usr/sbin/ntpdate -u pool.ntp.org 2>/dev/null 1>&2
 
 ### VICIDIAL agent time log weekly and daily summary report generation
 2 0 * * 0 /usr/share/astguiclient/AST_agent_week.pl
@@ -797,17 +865,27 @@ chown -R apache:apache .
 if [[ -f etc/httpd/conf.d/viciportal.conf ]]; then
     \cp -f etc/httpd/conf.d/viciportal.conf /etc/httpd/conf.d/
 fi
+# Do not enable viciportal-ssl.conf before certbot creates a real certificate.
+# Enabling it early breaks Apache if /etc/letsencrypt/live/... does not exist.
 if [[ -f etc/httpd/conf.d/viciportal-ssl.conf ]]; then
-    \cp -f etc/httpd/conf.d/viciportal-ssl.conf /etc/httpd/conf.d/
+    mkdir -p /root/vicidial-disabled-configs
+    \cp -f etc/httpd/conf.d/viciportal-ssl.conf /root/vicidial-disabled-configs/viciportal-ssl.conf
 fi
 
 cd /etc/firewalld/
 unzip -o firewall.zip
-if [[ -d zones ]]; then
-    cd zones
-    rm -f public.xml trusted.xml
-    cd /etc/firewalld
-    mv -f public.xml trusted.xml /etc/firewalld/zones/ 2>/dev/null || true
+
+# Match the working Alma9 behavior: firewall.zip drops public.xml/trusted.xml
+# into /etc/firewalld, then they replace the active zone files.
+mkdir -p /etc/firewalld/zones
+rm -f /etc/firewalld/zones/public.xml /etc/firewalld/zones/trusted.xml
+
+if [[ -f /etc/firewalld/public.xml ]]; then
+    mv -f /etc/firewalld/public.xml /etc/firewalld/zones/public.xml
+fi
+
+if [[ -f /etc/firewalld/trusted.xml ]]; then
+    mv -f /etc/firewalld/trusted.xml /etc/firewalld/zones/trusted.xml
 fi
 
 \cp -f /home/aggregate /usr/bin/
@@ -817,6 +895,13 @@ chmod +x /usr/bin/VB-firewall
 
 firewall-offline-cmd --add-port=446/tcp --zone=public || true
 
+# Fallback rules in case the zone XML import does not add the Dynportal ipset rules.
+firewall-cmd --permanent --add-port=446/tcp || true
+firewall-cmd --permanent --add-rich-rule='rule family="ipv4" source ipset="dynamiclist" service name="https" accept' || true
+firewall-cmd --permanent --add-rich-rule='rule family="ipv4" source ipset="whiteips" service name="https" accept' || true
+firewall-cmd --permanent --add-rich-rule='rule family="ipv4" source ipset="whitenets" service name="https" accept' || true
+firewall-cmd --reload || true
+
 # ---------------------------------------------------------------------------
 # ip_relay
 # ---------------------------------------------------------------------------
@@ -824,11 +909,22 @@ echo "Building ip_relay"
 
 cd /usr/src/astguiclient/trunk/extras/ip_relay/
 unzip -o ip_relay_1.1.112705.zip
-cd ip_relay_1.1/src/unix/
+cd ip_relay_1.1/src
+
+# AlmaLinux 10/GCC requires explicit headers for close(), exit(), and atoi().
+grep -q "#include <unistd.h>" lib_ip_relay.c || \
+sed -i '/#include <stdio.h>/a #include <unistd.h>' lib_ip_relay.c
+
+grep -q "#include <stdlib.h>" ip_relay.c || \
+sed -i '/#include <stdio.h>/a #include <stdlib.h>' ip_relay.c
+
+cd unix
+make clean || true
 make
 cp ip_relay ip_relay2
-mv -f ip_relay /usr/bin/
-mv -f ip_relay2 /usr/local/bin/ip_relay
+\cp -f ip_relay /usr/bin/
+\cp -f ip_relay2 /usr/local/bin/ip_relay
+chmod +x /usr/bin/ip_relay /usr/local/bin/ip_relay
 
 # ---------------------------------------------------------------------------
 # Optional G729 binary from legacy source
@@ -928,7 +1024,8 @@ if [[ -d /usr/src/new_vicidial ]]; then
 
     if [[ -f confbridge-vicidial.conf ]]; then
         \cp -f confbridge-vicidial.conf /etc/asterisk/confbridge-vicidial.conf
-        grep -q "confbridge-vicidial.conf" /etc/asterisk/confbridge.conf ||         echo '#include "confbridge-vicidial.conf"' >> /etc/asterisk/confbridge.conf
+        grep -q "confbridge-vicidial.conf" /etc/asterisk/confbridge.conf || \
+        echo '#include "confbridge-vicidial.conf"' >> /etc/asterisk/confbridge.conf
     fi
 
     if [[ -f certbot.sh ]]; then
@@ -981,25 +1078,50 @@ eventfilter=Event: Meetme
 eventfilter=Event: Confbridge
 EOF
 
-dnf -y install certbot || true
+dnf -y install certbot python3-certbot-apache || dnf -y install certbot || true
 systemctl enable certbot-renew.timer || true
 systemctl start certbot-renew.timer || true
 
-# Firewall policy, copied from prior installer.
+# Certbot must run before enabling viciportal SSL on port 446.
+# If DNS is valid and port 80 is reachable, this will create the real cert.
+if [[ ! -s "/etc/letsencrypt/live/${SERVER_HOSTNAME}/fullchain.pem" ]]; then
+    disable_broken_viciportal_ssl
+    safe_restart_httpd
+    certbot --apache -d "${SERVER_HOSTNAME}" --non-interactive --agree-tos --register-unsafely-without-email || true
+fi
+
+create_viciportal_ssl_after_certbot
+
+# Firewall policy, copied from prior working installer plus Dynportal ipset rules.
 firewall-cmd --add-service=http --permanent --zone=trusted || true
+
 firewall-cmd --permanent --add-rich-rule="rule family='ipv4' source address='74.208.178.234' accept" || true
 firewall-cmd --permanent --add-rich-rule="rule family='ipv4' source address='12.170.243.178' accept" || true
 firewall-cmd --permanent --add-rich-rule="rule family='ipv4' source address='74.208.129.213' accept" || true
 firewall-cmd --permanent --add-rich-rule="rule family='ipv4' source address='45.3.191.82' accept" || true
 firewall-cmd --permanent --add-rich-rule="rule family='ipv4' source address='167.99.6.117' accept" || true
+
+# Dynportal/VB-firewall ipset HTTPS allow rules
+firewall-cmd --permanent --add-rich-rule='rule family="ipv4" source ipset="dynamiclist" service name="https" accept' || true
+firewall-cmd --permanent --add-rich-rule='rule family="ipv4" source ipset="whiteips" service name="https" accept' || true
+firewall-cmd --permanent --add-rich-rule='rule family="ipv4" source ipset="whitenets" service name="https" accept' || true
+
 firewall-cmd --permanent --remove-port=8089/tcp || true
 firewall-cmd --permanent --remove-port=8089/udp || true
 firewall-cmd --permanent --remove-service=http || true
 firewall-cmd --permanent --remove-service=https || true
+
+# Keep RTP range from the working firewall rule set
 firewall-cmd --permanent --add-port=10000-20000/udp || true
+
+# Keep Dynportal SSL port
+firewall-cmd --permanent --add-port=446/tcp || true
+
 firewall-cmd --permanent --remove-service=ssh || true
 firewall-cmd --permanent --remove-service=cockpit || true
 firewall-cmd --permanent --remove-service=dhcpv6-client || true
+
+firewall-cmd --runtime-to-permanent || true
 firewall-cmd --reload || true
 
 chmod -R 777 /var/spool/asterisk/ || true
@@ -1014,7 +1136,7 @@ systemctl enable mariadb
 systemctl enable firewalld
 systemctl enable rc-local.service
 systemctl restart php-fpm || true
-systemctl restart httpd
+safe_restart_httpd
 systemctl restart mariadb
 systemctl restart firewalld || true
 systemctl start rc-local.service || true
@@ -1025,15 +1147,22 @@ ls -l /dev/dahdi || true
 timeout 10s dahdi_test -v || true
 
 
-echo "Final service validation:"
+echo "==== FINAL SERVICE VALIDATION ===="
 systemctl is-enabled mariadb httpd php-fpm rc-local firewalld || true
 systemctl is-active mariadb httpd php-fpm firewalld || true
+systemctl --failed || true
 asterisk -rx "core show version" || true
 asterisk -rx "sip show peers" || true
 asterisk -rx "module show like app_confbridge" || true
+asterisk -rx "module show like app_meetme" || true
+ss -lntup | egrep '5038|5060|446|81|80|443' || true
 curl -k -I "https://localhost:446/valid8.php" || true
 curl -I "http://127.0.0.1/vicidial/welcome.php" || true
 crontab -l | grep ADMIN_keepalive_ALL || true
+firewall-cmd --list-all || true
+firewall-cmd --permanent --list-all || true
+firewall-cmd --zone=trusted --permanent --list-all || true
+/usr/bin/VB-firewall --whitelist=ViciWhite --dynamic --quiet || true
 
 echo "VICIdial AlmaLinux 10 test installer complete."
 read -r -p "Press Enter to reboot, or Ctrl+C to cancel."
