@@ -411,7 +411,7 @@ systemctl restart dahdi || service dahdi restart || true
 systemctl status dahdi --no-pager || true
 
 lsmod | grep dahdi || true
-dahdi_test || true
+timeout 10s dahdi_test || true
 
 read -p 'Press Enter to continue: '
 
