@@ -291,18 +291,18 @@ make
 make install 
 ldconfig
 
-#####################################Install Dahdi##############################################################
-#echo "Install Dahdi"
-#ln -sf /usr/lib/modules/$(uname -r)/vmlinux.xz /boot/
-#cd /etc/include
-#wget https://dialer.demo.genxcontactcenter.com/newt.h
+#Install Dahdi
+echo "Install Dahdi"
+ln -sf /usr/lib/modules/$(uname -r)/vmlinux.xz /boot/
+cd /etc/include
+wget https://dialer.demo.genxcontactcenter.com/newt.h
 
-#cd /usr/src/
-#mkdir dahdi-linux-complete-3.4.0+3.4.0
-#cd dahdi-linux-complete-3.4.0+3.4.0
-#wget https://dialer.demo.genxcontactcenter.com/dahdi-9.5-fix.zip
-#unzip dahdi-9.5-fix.zip
-#yum in newt* -y
+cd /usr/src/
+mkdir dahdi-linux-complete-3.4.0+3.4.0
+cd dahdi-linux-complete-3.4.0+3.4.0
+wget https://dialer.demo.genxcontactcenter.com/dahdi-9.5-fix.zip
+unzip dahdi-9.5-fix.zip
+yum in newt* -y
 
 # Install Dahdi
 #echo "Install Dahdi"
@@ -331,87 +331,27 @@ ldconfig
 
 ##ExecStart=/usr/sbin/dahdi_cfg -vv
 
-#make clean
-#make
-#make install
-#make install-config
-
-#yum -y install dahdi-tools-libs
-
-#cd tools
-#make clean
-#make
-#make install
-#make install-config
-
-#cp /etc/dahdi/system.conf.sample /etc/dahdi/system.conf
-#modprobe dahdi
-#modprobe dahdi_dummy
-#/usr/sbin/dahdi_cfg -vvvvvvvvvvvvv
-
-#systemctl enable dahdi
-#service dahdi start
-#service dahdi status
-###################################################################################################
-
-# Install DAHDI
-echo "Install DAHDI"
-
-ln -sf "/usr/lib/modules/$(uname -r)/vmlinux.xz" /boot/ || true
-
-mkdir -p /etc/include
-cd /etc/include || exit 1
-wget --no-check-certificate -O newt.h "https://dialer.demo.genxcontactcenter.com/newt.h"
-
-cd /usr/src || exit 1
-rm -rf dahdi-linux-complete-3.4.0+3.4.0
-mkdir -p dahdi-linux-complete-3.4.0+3.4.0
-cd dahdi-linux-complete-3.4.0+3.4.0 || exit 1
-
-wget --no-check-certificate -O dahdi-9.5-fix.zip "https://dialer.demo.genxcontactcenter.com/dahdi-9.5-fix.zip"
-unzip -o dahdi-9.5-fix.zip
-
-yum -y install newt newt-devel || true
-
-# AlmaLinux 9 newer kernel DAHDI fixes
-sed -i 's/static int span_match(struct device \*dev, struct device_driver \*driver)/static int span_match(struct device *dev, const struct device_driver *driver)/' linux/drivers/dahdi/dahdi-sysfs.c
-sed -i 's/static int chan_match(struct device \*dev, struct device_driver \*driver)/static int chan_match(struct device *dev, const struct device_driver *driver)/' linux/drivers/dahdi/dahdi-sysfs-chan.c
-
-sed -i \
-  -e '/wctc4xxp/d' \
-  -e '/wcte12xp/d' \
-  -e '/wcte13xp/d' \
-  -e '/wcte43x/d' \
-  -e '/xpp/d' \
-  -e '/VPMADT032/s/^/#/' \
-  linux/drivers/dahdi/Kbuild
-
-make clean
-make all 2>&1 | tee /tmp/dahdi-build.log
-make install
-make install-config
-
-cd tools || exit 1
 make clean
 make
 make install
 make install-config
 
-cp -f /etc/dahdi/system.conf.sample /etc/dahdi/system.conf 2>/dev/null || true
+yum -y install dahdi-tools-libs
 
-depmod -a
+cd tools
+make clean
+make
+make install
+make install-config
 
+cp /etc/dahdi/system.conf.sample /etc/dahdi/system.conf
 modprobe dahdi
-modprobe dahdi_dummy || true
+modprobe dahdi_dummy
+/usr/sbin/dahdi_cfg -vvvvvvvvvvvvv
 
-/usr/sbin/dahdi_cfg -vvvv || true
-
-systemctl enable dahdi || true
-systemctl restart dahdi || service dahdi restart || true
-systemctl status dahdi --no-pager || true
-
-lsmod | grep dahdi || true
-timeout 10s dahdi_test || true
+systemctl enable dahdi
+service dahdi start
+service dahdi status
 
 read -p 'Press Enter to continue: '
 
