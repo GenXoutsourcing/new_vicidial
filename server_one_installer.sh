@@ -17,10 +17,11 @@ prompt() {
 
 echo "Getting Machine info - No hostname? Enter the IP Address"
 echo "**************************************************************************"
-prompt hostname "Enter the hostname:" "$hostname"
+default_hostname="$(hostname -f 2>/dev/null || hostname 2>/dev/null || echo localhost)"
+prompt hostname "Enter the hostname:" "$default_hostname"
 echo "Press Enter to continue"
 read
-hostnamectl set-hostname $hostname
+hostnamectl set-hostname "$hostname"
 # Retrieve the Hostname
 hostname=$(hostname | awk '{print $1}')
 echo "Hostname\t: $hostname"
@@ -53,7 +54,6 @@ yum -y install yum-utils
 dnf install https://dl.fedoraproject.org/pub/epel/epel-release-latest-9.noarch.rpm -y
 dnf install https://rpms.remirepo.net/enterprise/remi-release-9.rpm -y
 dnf module enable php:remi-7.4 -y
-dnf module enable mariadb:10.5 -y
 dnf config-manager --set-enabled crb
 
 dnf -y install dnf-plugins-core
@@ -397,7 +397,9 @@ cd /usr/src/asterisk
 wget -N https://downloads.asterisk.org/pub/telephony/libpri/libpri-1.6.1.tar.gz
 wget -N https://dialer.demo.genxcontactcenter.com/asterisk-18.21.0-vici.tar.gz
 tar -xvzf asterisk-18.21.0-vici.tar.gz
-tar -xvzf libpri-*
+rm -rf libpri-1.6.1
+rm -f libpri-1.6.1.tar.gz.1 libpri-1.6.1.tar.gz.2
+tar -xvzf libpri-1.6.1.tar.gz
 
 cd /usr/src
 wget -N https://github.com/cisco/libsrtp/archive/v2.1.0.tar.gz
@@ -550,7 +552,7 @@ ASTGUI
 echo "Replace IP address in Default"
 #echo "%%%%%%%%%Please Enter This Server IP ADD%%%%%%%%%%%%"
 #read serveripadd
-sed -i s/SERVERIP/"$ip_address"/g /etc/astguiclient.conf
+sed -i "s/SERVERIP/${ip_address}/g" /etc/astguiclient.conf
 
 echo "Install VICIDIAL"
 perl install.pl --no-prompt --copy_sample_conf_files=Y
@@ -574,7 +576,7 @@ echo "Populate AREA CODES"
 /usr/share/astguiclient/ADMIN_area_code_populate.pl
 echo "Replace OLD IP. You need to Enter your Current IP here"
 
-/usr/share/astguiclient/ADMIN_update_server_ip.pl --old-server_ip=10.10.10.15 --server_ip=$ip_address --auto
+/usr/share/astguiclient/ADMIN_update_server_ip.pl --old-server_ip=10.10.10.15 --server_ip="$ip_address" --auto
 
 
 perl install.pl --no-prompt
@@ -753,7 +755,7 @@ EOF
 
 systemctl daemon-reload
 systemctl enable rc-local.service
-systemctl restart rc-local.service || true
+# systemctl restart rc-local.service || true  # disabled during installer
 
 ##Install Dynportal
 yum install -y firewalld
@@ -909,8 +911,8 @@ mv confbridge-vicidial.conf /etc/asterisk/
 grep -q '^#include confbridge-vicidial.conf' /etc/asterisk/confbridge.conf || echo '#include confbridge-vicidial.conf' >> /etc/asterisk/confbridge.conf
 
 systemctl daemon-reload
-sudo systemctl enable rc-local.service
-sudo systemctl start rc-local.service
+sudo systemctl enable rc-local.service || true
+# sudo systemctl start rc-local.service  # disabled during installer
 
 cat <<WELCOME>> /var/www/html/index.html
 <META HTTP-EQUIV=REFRESH CONTENT="1; URL=/vicidial/welcome.php">
