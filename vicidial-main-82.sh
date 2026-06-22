@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 echo "Vicidial installation AlmaLinux/RockyLinux with WebPhone and Dynamic portal"
 
@@ -432,30 +432,46 @@ cd /usr/src/astguiclient
 svn checkout svn://svn.eflo.net/agc_2-X/trunk
 cd /usr/src/astguiclient/trunk
 
-#Add mysql users and Databases
-echo "%%%%%%%%%%%%%%%Please Enter Mysql Password Or Just Press Enter if you Dont have Password%%%%%%%%%%%%%%%%%%%%%%%%%%"
-mysql -u root -p << MYSQLCREOF
-CREATE DATABASE asterisk DEFAULT CHARACTER SET utf8 COLLATE utf8_unicode_ci;
-CREATE USER 'cron'@'localhost' IDENTIFIED BY '1234';
-GRANT SELECT,CREATE,ALTER,INSERT,UPDATE,DELETE,LOCK TABLES on asterisk.* TO cron@'%' IDENTIFIED BY '1234';
-GRANT SELECT,CREATE,ALTER,INSERT,UPDATE,DELETE,LOCK TABLES on asterisk.* TO cron@localhost IDENTIFIED BY '1234';
-GRANT RELOAD ON *.* TO cron@'%';
-GRANT RELOAD ON *.* TO cron@localhost;
-CREATE USER 'custom'@'localhost' IDENTIFIED BY 'custom1234';
-GRANT SELECT,CREATE,ALTER,INSERT,UPDATE,DELETE,LOCK TABLES on asterisk.* TO custom@'%' IDENTIFIED BY 'custom1234';
-GRANT SELECT,CREATE,ALTER,INSERT,UPDATE,DELETE,LOCK TABLES on asterisk.* TO custom@localhost IDENTIFIED BY 'custom1234';
-GRANT RELOAD ON *.* TO custom@'%';
-GRANT RELOAD ON *.* TO custom@localhost;
-flush privileges;
+#Add mysql users and Databases - rerun safe
+# This block is safe if the installer is run again on a server where the asterisk DB already exists.
+echo "%%%%%%%%%%%%%%% MySQL root password: press Enter if root has no password %%%%%%%%%%%%%%%%%%%%%%%%%%"
+read -s -p "MySQL root password: " MYSQL_ROOT_PASS
+echo
 
+if [ -z "$MYSQL_ROOT_PASS" ]; then
+    MYSQL=(mysql -u root)
+else
+    MYSQL=(mysql -u root -p"$MYSQL_ROOT_PASS")
+fi
+
+"${MYSQL[@]}" << MYSQLCREOF
+CREATE DATABASE IF NOT EXISTS asterisk DEFAULT CHARACTER SET utf8 COLLATE utf8_unicode_ci;
+CREATE USER IF NOT EXISTS 'cron'@'localhost' IDENTIFIED BY '1234';
+CREATE USER IF NOT EXISTS 'cron'@'%' IDENTIFIED BY '1234';
+CREATE USER IF NOT EXISTS 'custom'@'localhost' IDENTIFIED BY 'custom1234';
+CREATE USER IF NOT EXISTS 'custom'@'%' IDENTIFIED BY 'custom1234';
+GRANT SELECT,CREATE,ALTER,INSERT,UPDATE,DELETE,LOCK TABLES on asterisk.* TO 'cron'@'%';
+GRANT SELECT,CREATE,ALTER,INSERT,UPDATE,DELETE,LOCK TABLES on asterisk.* TO 'cron'@'localhost';
+GRANT RELOAD ON *.* TO 'cron'@'%';
+GRANT RELOAD ON *.* TO 'cron'@'localhost';
+GRANT SELECT,CREATE,ALTER,INSERT,UPDATE,DELETE,LOCK TABLES on asterisk.* TO 'custom'@'%';
+GRANT SELECT,CREATE,ALTER,INSERT,UPDATE,DELETE,LOCK TABLES on asterisk.* TO 'custom'@'localhost';
+GRANT RELOAD ON *.* TO 'custom'@'%';
+GRANT RELOAD ON *.* TO 'custom'@'localhost';
+FLUSH PRIVILEGES;
 SET GLOBAL connect_timeout=60;
-
-use asterisk;
-\. /usr/src/astguiclient/trunk/extras/MySQL_AST_CREATE_tables.sql
-\. /usr/src/astguiclient/trunk/extras/first_server_install.sql
-update servers set asterisk_version='18.21.1-vici';
-quit
 MYSQLCREOF
+
+# Import schema only if this is a fresh asterisk database. Reimporting on reruns causes duplicate table/key errors.
+if "${MYSQL[@]}" -Nse "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema='asterisk' AND table_name='system_settings';" | grep -q '^0$'; then
+    echo "Fresh asterisk DB detected. Importing VICIdial schema..."
+    "${MYSQL[@]}" asterisk < /usr/src/astguiclient/trunk/extras/MySQL_AST_CREATE_tables.sql
+    "${MYSQL[@]}" asterisk < /usr/src/astguiclient/trunk/extras/first_server_install.sql
+else
+    echo "Existing asterisk DB detected. Skipping VICIdial schema import for rerun safety."
+fi
+
+"${MYSQL[@]}" -e "USE asterisk; UPDATE servers SET asterisk_version='18.21.1-vici';" || true
 
 read -p 'Press Enter to continue: '
 
